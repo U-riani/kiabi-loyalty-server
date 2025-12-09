@@ -29,6 +29,14 @@ app.use(express.json());
 app.use("/api/sms", smsRoutes);
 app.use("/api/users", userRoutes);
 
+app.get((req, res) => {
+  try {
+    res.json({message: "title"})
+  }catch(err) {
+
+  }
+})
+
 // FIX: server starts ONLY after Mongo connects
 const startServer = async () => {
   try {
