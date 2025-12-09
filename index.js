@@ -9,7 +9,6 @@ import mongoose from "mongoose";
 import smsRoutes from "./routes/smsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
-
 // 4) Create app
 const app = express();
 app.use(cors());
@@ -31,11 +30,11 @@ app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
   try {
-    res.json({message: "title"})
-  }catch(err) {
-
+    res.json({ message: "title" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
   }
-})
+});
 
 // FIX: server starts ONLY after Mongo connects
 const startServer = async () => {
