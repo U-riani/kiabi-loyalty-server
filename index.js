@@ -5,11 +5,13 @@ dotenv.config();
 // 2) Import core dependencies
 import express from "express";
 import cors from "cors";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
+import connectDB from "./config/db.js";
 import smsRoutes from "./routes/smsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
-// 4) Create app
+connectDB();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -36,21 +38,24 @@ app.get("/", (req, res) => {
   }
 });
 
-// FIX: server starts ONLY after Mongo connects
-const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000, // optional but recommended
-    });
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-    console.log("MongoDB connected");
+// // FIX: server starts ONLY after Mongo connects
+// const startServer = async () => {
+//   try {
+//     await mongoose.connect(process.env.MONGO_URI, {
+//       serverSelectionTimeoutMS: 5000, // optional but recommended
+//     });
 
-    app.listen(process.env.PORT, () => {
-      console.log(`Server running on port ${process.env.PORT}`);
-    });
-  } catch (err) {
-    console.error("MongoDB connection failed:", err.message);
-  }
-};
+//     console.log("MongoDB connected");
 
-startServer();
+//     app.listen(process.env.PORT, () => {
+//       console.log(`Server running on port ${process.env.PORT}`);
+//     });
+//   } catch (err) {
+//     console.error("MongoDB connection failed:", err.message);
+//   }
+// };
+
+// startServer();
