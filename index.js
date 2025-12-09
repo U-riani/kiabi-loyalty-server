@@ -29,7 +29,7 @@ app.use(express.json());
 app.use("/api/sms", smsRoutes);
 app.use("/api/users", userRoutes);
 
-app.get((req, res) => {
+app.get("/", (req, res) => {
   try {
     res.json({message: "title"})
   }catch(err) {
