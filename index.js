@@ -1,0 +1,52 @@
+// 1) Load env FIRST
+import dotenv from "dotenv";
+dotenv.config();
+
+// 2) Import core dependencies
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import smsRoutes from "./routes/smsRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+
+
+// 3) Debug: confirm env is loaded BEFORE routes/controllers
+console.log("TEST KEY:", process.env.GOSMS_API_KEY);
+
+// 4) Create app
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// 5) Connect to MongoDB
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => console.log("MongoDB error:", err));
+
+// // 6) Import routes AFTER dotenv is loaded
+// import smsRoutes from "./routes/smsRoutes.js";
+// import userRoutes from "./routes/userRoutes.js";
+
+// 7) Use routes
+app.use("/api/sms", smsRoutes);
+app.use("/api/users", userRoutes);
+
+// FIX: server starts ONLY after Mongo connects
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000, // optional but recommended
+    });
+
+    console.log("MongoDB connected");
+
+    app.listen(process.env.PORT, () => {
+      console.log(`Server running on port ${process.env.PORT}`);
+    });
+  } catch (err) {
+    console.error("MongoDB connection failed:", err.message);
+  }
+};
+
+startServer();
