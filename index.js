@@ -10,9 +10,6 @@ import smsRoutes from "./routes/smsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
 
-// 3) Debug: confirm env is loaded BEFORE routes/controllers
-console.log("TEST KEY:", process.env.GOSMS_API_KEY);
-
 // 4) Create app
 const app = express();
 app.use(cors());
