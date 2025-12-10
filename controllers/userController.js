@@ -2,6 +2,15 @@ import User from "../models/User.js";
 
 export const registerUser = async (req, res) => {
   try {
+    const smsEnabled =
+      req.body.promotionChanel1 === true ||
+      req.body.promotionChanel1 === "true";
+
+    const emailEnabled =
+      req.body.promotionChanel2 === true ||
+      req.body.promotionChanel2 === "true";
+
+    const now = new Date();
 
     const data = {
       branch: req.body.branch,
@@ -16,21 +25,179 @@ export const registerUser = async (req, res) => {
       email: req.body.email || "",
       cardNumber: req.body.cardNumber,
       phone: req.body.phoneNumber,
+
       promoChannels: {
-        sms: req.body.promotionChanel1 || false,
-        email: req.body.promotionChanel2 || false,
+        sms: {
+          enabled: smsEnabled,
+          createdAt: smsEnabled ? now : null,
+          updatedAt: smsEnabled ? now : null,
+        },
+        email: {
+          enabled: emailEnabled,
+          createdAt: emailEnabled ? now : null,
+          updatedAt: emailEnabled ? now : null,
+        },
       },
     };
-
-    console.log(data)
-
 
     const user = new User(data);
     await user.save();
 
-    return res.json({ success: true, user});
+    return res.json({ success: true, user });
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Registration failed" });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const now = new Date();
+
+    // Find user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Basic fields
+    const fields = [
+      "branch",
+      "gender",
+      "firstName",
+      "lastName",
+      "dateOfBirth",
+      "address",
+      "zipCode",
+      "country",
+      "city",
+      "email",
+      "cardNumber",
+      "phone",
+    ];
+
+    fields.forEach((f) => {
+      if (req.body[f] !== undefined) {
+        user[f] = req.body[f];
+      }
+    });
+
+    // Promo Channels
+    const smsEnabled =
+      req.body.promotionChanel1 === true ||
+      req.body.promotionChanel1 === "true";
+
+    const emailEnabled =
+      req.body.promotionChanel2 === true ||
+      req.body.promotionChanel2 === "true";
+
+    // Update SMS channel
+    if (req.body.promotionChanel1 !== undefined) {
+      const sms = user.promoChannels.sms;
+
+      if (sms.enabled !== smsEnabled) {
+        sms.updatedAt = now;
+        if (sms.createdAt === null && smsEnabled) {
+          sms.createdAt = now;
+        }
+      }
+
+      sms.enabled = smsEnabled;
+    }
+
+    // Update Email channel
+    if (req.body.promotionChanel2 !== undefined) {
+      const email = user.promoChannels.email;
+
+      if (email.enabled !== emailEnabled) {
+        email.updatedAt = now;
+        if (email.createdAt === null && emailEnabled) {
+          email.createdAt = now;
+        }
+      }
+
+      email.enabled = emailEnabled;
+    }
+
+    // Save changes
+    await user.save();
+
+    return res.json({ success: true, user });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Update failed", message: err.message });
+  }
+};
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-__v");
+
+    return res.json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
+export const getUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select("-__v");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.json({
+      success: true,
+      user,
+    });
+  } catch (err) {
+    console.log(err);
+
+    res.status(500).json({
+      error: "Failed to fetch user",
+      message: err.message,
+    });
+  }
+};
+
+export const getPaginatedUsers = async (req, res) => {
+  try {
+    // page=1, limit=20 are defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    // how many to skip
+    const skip = (page - 1) * limit;
+
+    const users = await User.find()
+      .sort({ createdAt: -1 }) // newest first (optional)
+      .skip(skip)
+      .limit(limit)
+      .select("-__v");
+
+    const total = await User.countDocuments();
+
+    return res.json({
+      success: true,
+      page,
+      limit,
+      totalUsers: total,
+      totalPages: Math.ceil(total / limit),
+      users,
+    });
+  } catch (err) {
+    console.log(err);
+    res
+      .status(500)
+      .json({ error: "Failed to fetch users", message: err.message });
   }
 };
