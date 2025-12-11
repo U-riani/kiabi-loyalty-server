@@ -12,12 +12,12 @@ const userSchema = new mongoose.Schema(
     lastName: String,
     dateOfBirth: String,
     address: String,
-    zipCode: String,
     country: String,
     city: String,
     email: String,
     phone: String,
     cardNumber: String,
+    termsAccepted: { type: Boolean, required: true },
     promoChannels: {
       sms: {
         enabled: { type: Boolean, default: false },

@@ -11,7 +11,6 @@ export const registerUser = async (req, res) => {
       req.body.promotionChanel2 === "true";
 
     const now = new Date();
-
     const data = {
       branch: req.body.branch,
       gender: req.body.gender,
@@ -25,7 +24,7 @@ export const registerUser = async (req, res) => {
       email: req.body.email || "",
       cardNumber: req.body.cardNumber,
       phone: req.body.phoneNumber,
-
+      termsAccepted: req.body.termsAccepted,
       promoChannels: {
         sms: {
           enabled: smsEnabled,
