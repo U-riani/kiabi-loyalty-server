@@ -13,6 +13,7 @@ router.post("/register", registerUser);
 router.get("/", getAllUsers);
 router.get("/paginated", getPaginatedUsers);
 router.get("/:id", getUser);
-router.patch("/update/:id", updateUser);
+router.patch("/:id", updateUser);
 
 export default router;
+ 

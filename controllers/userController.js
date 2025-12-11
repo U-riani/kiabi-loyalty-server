@@ -55,14 +55,13 @@ export const updateUser = async (req, res) => {
     const { id } = req.params;
     const now = new Date();
 
-    // Find user
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Basic fields
-    const fields = [
+    // Update simple fields
+    const editableFields = [
       "branch",
       "gender",
       "firstName",
@@ -77,53 +76,47 @@ export const updateUser = async (req, res) => {
       "phone",
     ];
 
-    fields.forEach((f) => {
-      if (req.body[f] !== undefined) {
-        user[f] = req.body[f];
+    editableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        user[field] = req.body[field];
       }
     });
 
-    // Promo Channels
-    const smsEnabled =
-      req.body.promotionChanel1 === true ||
-      req.body.promotionChanel1 === "true";
+    // -----------------------
+    //   UPDATE PROMO CHANNELS
+    // -----------------------
 
-    const emailEnabled =
-      req.body.promotionChanel2 === true ||
-      req.body.promotionChanel2 === "true";
+    if (req.body.promoChannels) {
+      // SMS
+      if (req.body.promoChannels.sms?.enabled !== undefined) {
+        const newVal = req.body.promoChannels.sms.enabled;
+        const sms = user.promoChannels.sms;
 
-    // Update SMS channel
-    if (req.body.promotionChanel1 !== undefined) {
-      const sms = user.promoChannels.sms;
-
-      if (sms.enabled !== smsEnabled) {
-        sms.updatedAt = now;
-        if (sms.createdAt === null && smsEnabled) {
-          sms.createdAt = now;
+        if (sms.enabled !== newVal) {
+          sms.updatedAt = now;
+          if (newVal && !sms.createdAt) sms.createdAt = now;
         }
+
+        sms.enabled = newVal;
       }
 
-      sms.enabled = smsEnabled;
-    }
+      // EMAIL
+      if (req.body.promoChannels.email?.enabled !== undefined) {
+        const newVal = req.body.promoChannels.email.enabled;
+        const email = user.promoChannels.email;
 
-    // Update Email channel
-    if (req.body.promotionChanel2 !== undefined) {
-      const email = user.promoChannels.email;
-
-      if (email.enabled !== emailEnabled) {
-        email.updatedAt = now;
-        if (email.createdAt === null && emailEnabled) {
-          email.createdAt = now;
+        if (email.enabled !== newVal) {
+          email.updatedAt = now;
+          if (newVal && !email.createdAt) email.createdAt = now;
         }
-      }
 
-      email.enabled = emailEnabled;
+        email.enabled = newVal;
+      }
     }
 
-    // Save changes
     await user.save();
 
-    return res.json({ success: true, user });
+    res.json({ success: true, user });
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Update failed", message: err.message });
