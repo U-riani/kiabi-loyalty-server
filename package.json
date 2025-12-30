@@ -18,6 +18,7 @@
     "mongoose": "^9.0.0",
     "nodemon": "^3.1.11",
     "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-dist": "^5.31.0",
     "swagger-ui-express": "^5.0.1"
   }
 }
