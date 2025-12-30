@@ -1,4 +1,6 @@
 // 1) Load env FIRST
+console.log("🔥 THIS INDEX.JS IS RUNNING 🔥");
+
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -9,6 +11,8 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import smsRoutes from "./routes/smsRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger.js";
 
 connectDB();
 
@@ -29,6 +33,12 @@ app.use(express.json());
 // 7) Use routes
 app.use("/api/sms", smsRoutes);
 app.use("/api/users", userRoutes);
+
+app.use("/api-docs", swaggerUi.serve);
+app.get("/api-docs", swaggerUi.setup(swaggerSpec));
+app.get("/__swagger-test", (req, res) => {
+  res.json(swaggerSpec);
+});
 
 app.get("/", (req, res) => {
   try {

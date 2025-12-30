@@ -193,3 +193,72 @@ export const getPaginatedUsers = async (req, res) => {
       .json({ error: "Failed to fetch users", message: err.message });
   }
 };
+
+export const getUsersByDate = async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        error: "Date is required (YYYY-MM-DD)",
+      });
+    }
+
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const users = await User.find({
+      createdAt: { $gte: start, $lte: end },
+    })
+      .sort({ createdAt: -1 })
+      .select("-__v");
+
+    return res.json({
+      success: true,
+      date,
+      count: users.length,
+      users,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+export const getUsersByUpdateDate = async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        error: "Date is required (YYYY-MM-DD)",
+      });
+    }
+
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const users = await User.find({
+      updatedAt: { $gte: start, $lte: end },
+    })
+      .sort({ updatedAt: -1 })
+      .select("-__v");
+
+    return res.json({
+      success: true,
+      date,
+      count: users.length,
+      users,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
