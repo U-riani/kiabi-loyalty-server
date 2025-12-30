@@ -15,21 +15,20 @@ const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Frontend → Apex Contract",
+      title: "Loyalty Users API",
       version: "1.0.0",
       description:
-        "This Swagger documents ONLY the registration payload sent to Apex."
+        "API for managing loyalty users (registration, updates, queries).",
     },
-
     // 👇 USE IT HERE
     servers: [
       {
-        url: serverUrl
-      }
-    ]
+        url: serverUrl,
+      },
+    ],
   },
 
-  apis: [path.join(__dirname, "routes", "userRoutes.js")]
+  apis: [path.join(__dirname, "routes", "userRoutes.js")],
 };
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions);

@@ -18,12 +18,12 @@ export const registerUser = async (req, res) => {
       lastName: req.body.lastName,
       dateOfBirth: req.body.dateOfBirth,
       address: req.body.address || "",
-      zipCode: req.body.zipCode || "",
       city: req.body.city || "",
       country: req.body.country || "",
       email: req.body.email || "",
       cardNumber: req.body.cardNumber,
-      phone: req.body.phoneNumber,
+      phoneCode: req.body.phoneCode,
+      phoneNumber: req.body.phoneNumber,
       termsAccepted: req.body.termsAccepted,
       promoChannels: {
         sms: {
@@ -67,12 +67,12 @@ export const updateUser = async (req, res) => {
       "lastName",
       "dateOfBirth",
       "address",
-      "zipCode",
       "country",
       "city",
       "email",
       "cardNumber",
-      "phone",
+      "phoneNumber",
+      "phoneCode",
     ];
 
     editableFields.forEach((field) => {

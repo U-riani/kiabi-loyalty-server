@@ -22,10 +22,8 @@ const router = express.Router();
  * @swagger
  * /api/users/register:
  *   post:
- *     summary: Register loyalty user (Frontend → Apex)
- *     description: >
- *       Triggered after user submits the registration form
- *       and phone number is successfully verified.
+ *     summary: Register loyalty user
+ *     description: Triggered after user submits the registration form and phone number is verified.
  *     tags: [Users]
  *     requestBody:
  *       required: true
@@ -34,17 +32,20 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             required:
+ *               - branch
  *               - gender
  *               - firstName
  *               - lastName
  *               - dateOfBirth
- *               - address
- *               - country
- *               - city
  *               - cardNumber
  *               - phoneNumber
+ *               - phoneCode
  *               - termsAccepted
  *             properties:
+ *               branch:
+ *                 type: string
+ *                 enum: [tbilisi, batumi]
+ *                 example: "tbilisi"
  *               gender:
  *                 type: string
  *                 enum: [female, male, other]
@@ -74,34 +75,28 @@ const router = express.Router();
  *               cardNumber:
  *                 type: string
  *                 example: "123-456-789-00001"
+ *               phoneCode:
+ *                 type: string
+ *                 example: "+995"
  *               phoneNumber:
  *                 type: string
- *                 example: "995555123456"
+ *                 example: "555123456"
  *               promotionChanel1:
  *                 type: boolean
+ *                 description: SMS promotions
  *                 example: true
  *               promotionChanel2:
  *                 type: boolean
+ *                 description: Email promotions
  *                 example: true
  *               termsAccepted:
  *                 type: boolean
  *                 example: true
- *               branch:
- *                 type: string
- *                 example: "tbilisi"
  *     responses:
  *       200:
- *         description: User registered and forwarded to Apex
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *       400:
- *         description: Validation error
+ *         description: User registered successfully
+ *       500:
+ *         description: Registration failed
  */
 router.post("/register", registerUser);
 
