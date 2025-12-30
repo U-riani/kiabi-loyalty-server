@@ -7,7 +7,6 @@ dotenv.config();
 // 2) Core deps
 import express from "express";
 import cors from "cors";
-import path from "path";
 
 // DB + routes
 import connectDB from "./config/db.js";
