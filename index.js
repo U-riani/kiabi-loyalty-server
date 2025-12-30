@@ -37,21 +37,15 @@ app.use("/api/sms", smsRoutes);
 app.use("/api/users", userRoutes);
 
 // --------------------
-// SWAGGER (Vercel-safe)
+// SWAGGER (THIS IS THE FIX)
 // --------------------
-const swaggerAssetsPath = swaggerUiDist.getAbsoluteFSPath();
-
-app.use(
-  "/api-docs",
-  express.static(swaggerAssetsPath),
-  swaggerUi.setup(swaggerSpec)
-);
+app.use("/api-docs", swaggerUi.serve);
+app.get("/api-docs", swaggerUi.setup(swaggerSpec));
 
 // Optional debug
 app.get("/__swagger-test", (req, res) => {
   res.json(swaggerSpec);
 });
-
 // --------------------
 // ROOT
 // --------------------
