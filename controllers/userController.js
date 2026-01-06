@@ -40,6 +40,7 @@ export const registerUser = async (req, res) => {
     };
 
     const user = new User(data);
+    console.log(user);
     await user.save();
 
     return res.json({ success: true, user });
