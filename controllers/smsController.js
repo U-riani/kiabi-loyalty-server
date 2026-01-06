@@ -3,7 +3,7 @@ import { SMS } from "@gosmsge/gosmsge-node";
 import dotenv from "dotenv";
 dotenv.config();
 import crypto from "crypto";
-import Otp from "../models/otp.js";
+import Otp from "../models/Otp.js";
 
 const sms = new SMS(process.env.GOSMS_API_KEY);
 const generateOtp = () =>
