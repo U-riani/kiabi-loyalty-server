@@ -1,13 +1,19 @@
 // controllers/smsCOntroller.js
 import { SMS } from "@gosmsge/gosmsge-node";
 import dotenv from "dotenv";
-dotenv.config();
+
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
+
 import crypto from "crypto";
 import Otp from "../models/Otp.js";
+if (!process.env.GOSMS_API_KEY) {
+  throw new Error("GOSMS_API_KEY is missing");
+}
 
 const sms = new SMS(process.env.GOSMS_API_KEY);
-const generateOtp = () =>
-  Math.floor(1000 + Math.random() * 9000).toString();
+const generateOtp = () => Math.floor(1000 + Math.random() * 9000).toString();
 
 const hashOtp = (otp) => crypto.createHash("sha256").update(otp).digest("hex");
 
@@ -54,7 +60,6 @@ https://kiabi-loyalty.netlify.app/terms-and-conditions`,
   }
 };
 
-
 export const verifyOtp = async (req, res) => {
   try {
     const { phoneNumber, code } = req.body;
@@ -98,7 +103,6 @@ export const verifyOtp = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
-
 
 export const createSender = async (req, res) => {
   try {
