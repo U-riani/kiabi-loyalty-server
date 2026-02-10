@@ -22,8 +22,32 @@ import { swaggerSpec } from "./swagger.js";
 // APP INIT
 // --------------------
 const app = express();
-app.use(cors());
-app.use(express.json()); 
+const allowedOrigins = [
+  "https://kiabi-loyalty.netlify.app",
+  "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow server-to-server & tools like Postman
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// VERY IMPORTANT for preflight
+app.options("*", cors());
+app.use(express.json());
 
 // --------------------
 // DB

@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
 }
-
 import crypto from "crypto";
 import Otp from "../models/Otp.js";
 if (!process.env.GOSMS_API_KEY) {
