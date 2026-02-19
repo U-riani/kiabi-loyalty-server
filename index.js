@@ -1,5 +1,4 @@
-// 1) Load env FIRST
-console.log("🔥 THIS INDEX.JS IS RUNNING 🔥");
+// backend/index.js
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -25,6 +24,7 @@ const app = express();
 const allowedOrigins = [
   "https://kiabi-loyalty.netlify.app",
   "http://localhost:5173",
+  "http://localhost:5000/api-docs",
 ];
 
 app.use(
@@ -42,7 +42,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
 // VERY IMPORTANT for preflight

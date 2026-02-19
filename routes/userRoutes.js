@@ -1,3 +1,4 @@
+// backend/routes/userRoutes.js
 import express from "express";
 import {
   registerUser,
@@ -20,85 +21,45 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/users/register:
+ * /apex/register-user:
  *   post:
- *     summary: Register loyalty user
- *     description: Triggered after user submits the registration form and phone number is verified.
- *     tags: [Users]
+ *     summary: (Documentation) Payload sent from Loyalty System to Apex ERP
+ *     description: |
+ *       This endpoint represents the request sent by Loyalty Backend to Apex ERP.
+ *       Apex ERP must validate cardNumber and return a status.
+ *     tags: [Apex Integration]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - branch
- *               - gender
- *               - firstName
- *               - lastName
- *               - dateOfBirth
- *               - cardNumber
- *               - phoneNumber
- *               - phoneCode
- *               - termsAccepted
- *             properties:
- *               branch:
- *                 type: string
- *                 enum: [tbilisi, batumi]
- *                 example: "tbilisi"
- *               gender:
- *                 type: string
- *                 enum: [female, male, other]
- *               firstName:
- *                 type: string
- *                 example: "Nino"
- *               lastName:
- *                 type: string
- *                 example: "Beridze"
- *               dateOfBirth:
- *                 type: string
- *                 format: date
- *                 example: "1995-06-12"
- *               address:
- *                 type: string
- *                 example: "Rustaveli Ave 25"
- *               country:
- *                 type: string
- *                 example: "Georgia"
- *               city:
- *                 type: string
- *                 example: "Tbilisi"
- *               email:
- *                 type: string
- *                 nullable: true
- *                 example: "nino.beridze@gmail.com"
- *               cardNumber:
- *                 type: string
- *                 example: "123-456-789-00001"
- *               phoneCode:
- *                 type: string
- *                 example: "+995"
- *               phoneNumber:
- *                 type: string
- *                 example: "555123456"
- *               promotionChanel1:
- *                 type: boolean
- *                 description: SMS promotions
- *                 example: true
- *               promotionChanel2:
- *                 type: boolean
- *                 description: Email promotions
- *                 example: true
- *               termsAccepted:
- *                 type: boolean
- *                 example: true
+ *             $ref: '#/components/schemas/ApexUserPayload'
  *     responses:
  *       200:
- *         description: User registered successfully
- *       500:
- *         description: Registration failed
+ *         description: Apex validation response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApexResponse'
  */
+
 router.post("/register", registerUser);
+
+
+//for apex fake endpoint to test integration without hitting real Apex server
+router.post("/mock/apex/register-user", (req, res) => {
+  const { cardNumber } = req.body;
+
+  if (cardNumber === "00000000000000") {
+    return res.json({ status: "CARD_NOT_FOUND" });
+  }
+
+  if (cardNumber === "11111111111111") {
+    return res.json({ status: "CARD_ALREADY_USED" });
+  }
+
+  return res.json({ status: "OK" });
+});
 
 router.get("/", getAllUsers);
 router.get("/paginated", getPaginatedUsers);

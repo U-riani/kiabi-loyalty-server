@@ -1,7 +1,23 @@
+// backend/controllers/userController.js
+
 import User from "../models/User.js";
 
 export const registerUser = async (req, res) => {
   try {
+    if (!req.body.cardNumber) {
+      return res.status(400).json({
+        success: false,
+        code: "CARD_REQUIRED",
+        message: "Card number is required",
+      });
+    }
+
+    const rawCard = req.body.cardNumber;
+    const normalizedCard = String(rawCard)
+      .replace(/-/g, "")
+      .replace(/\s/g, "")
+      .trim();
+
     const smsEnabled =
       req.body.promotionChanel1 === true ||
       req.body.promotionChanel1 === "true";
@@ -11,6 +27,7 @@ export const registerUser = async (req, res) => {
       req.body.promotionChanel2 === "true";
 
     const now = new Date();
+
     const data = {
       branch: req.body.branch,
       gender: req.body.gender,
@@ -21,7 +38,7 @@ export const registerUser = async (req, res) => {
       city: req.body.city || "",
       country: req.body.country || "",
       email: req.body.email || "",
-      cardNumber: req.body.cardNumber,
+      cardNumber: normalizedCard,
       phoneCode: req.body.phoneCode,
       phoneNumber: req.body.phoneNumber,
       termsAccepted: req.body.termsAccepted,
@@ -38,15 +55,90 @@ export const registerUser = async (req, res) => {
         },
       },
     };
+    console.log("Received registration data:", data);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    let apexResponse;
+
+    try {
+      apexResponse = await fetch(process.env.APEX_REGISTER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!apexResponse || !apexResponse.ok) {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_HTTP_ERROR",
+        message: "Apex server returned HTTP error",
+      });
+    }
+    let apexResult;
+
+    try {
+      apexResult = await apexResponse.json();
+    } catch {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_INVALID_RESPONSE",
+        message: "Invalid response format from Apex",
+      });
+    }
+
+    if (apexResult.status === "CARD_NOT_FOUND") {
+      return res.status(400).json({
+        success: false,
+        code: "CARD_NOT_FOUND",
+        message: "Card does not exist",
+      });
+    }
+
+    if (apexResult.status === "CARD_ALREADY_USED") {
+      return res.status(409).json({
+        success: false,
+        code: "CARD_ALREADY_USED",
+        message: "Card already used",
+      });
+    }
+
+    if (apexResult.status !== "OK") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_UNEXPECTED_RESPONSE",
+        message: "Unexpected response from Apex",
+      });
+    }
 
     const user = new User(data);
-    console.log(user);
     await user.save();
 
-    return res.json({ success: true, user });
+    return res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Registration failed" });
+    console.error(err);
+
+    if (err.name === "AbortError") {
+      return res.status(504).json({
+        success: false,
+        code: "APEX_TIMEOUT",
+        message: "Apex server timeout",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      code: "INTERNAL_ERROR",
+      message: "Registration failed",
+    });
   }
 };
 
