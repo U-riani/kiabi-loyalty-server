@@ -1,97 +1,72 @@
 // backend/controllers/userController.js
 
 import User from "../models/User.js";
+import { registerInApex, updateInApex } from "../services/apexService.js";
+import {
+  registerUserSchema,
+  updateUserSchema,
+} from "../validators/userValidator.js";
 
 export const registerUser = async (req, res) => {
   try {
-    if (!req.body.cardNumber) {
+    // -----------------------------
+    // 1️⃣ Validate input
+    // -----------------------------
+    const parsed = registerUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
       return res.status(400).json({
         success: false,
-        code: "CARD_REQUIRED",
-        message: "Card number is required",
+        code: "VALIDATION_ERROR",
+        message: parsed.error.errors,
       });
     }
 
-    const rawCard = req.body.cardNumber;
-    const normalizedCard = String(rawCard)
+    const input = parsed.data;
+
+    // -----------------------------
+    // 2️⃣ Normalize card number
+    // -----------------------------
+    const normalizedCard = input.cardNumber
       .replace(/-/g, "")
       .replace(/\s/g, "")
       .trim();
 
-    const smsEnabled =
-      req.body.promotionChanel1 === true ||
-      req.body.promotionChanel1 === "true";
-
-    const emailEnabled =
-      req.body.promotionChanel2 === true ||
-      req.body.promotionChanel2 === "true";
-
-    const now = new Date();
-
     const data = {
-      branch: req.body.branch,
-      gender: req.body.gender,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      dateOfBirth: req.body.dateOfBirth,
-      address: req.body.address || "",
-      city: req.body.city || "",
-      country: req.body.country || "",
-      email: req.body.email || "",
+      branch: input.branch,
+      gender: input.gender,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      dateOfBirth: input.dateOfBirth,
+      address: input.address || "",
+      city: input.city || "",
+      country: input.country || "",
+      email: input.email || "",
       cardNumber: normalizedCard,
-      phoneCode: req.body.phoneCode,
-      phoneNumber: req.body.phoneNumber,
-      termsAccepted: req.body.termsAccepted,
+      phoneCode: input.phoneCode,
+      phoneNumber: input.phoneNumber,
+      termsAccepted: input.termsAccepted,
       promoChannels: {
         sms: {
-          enabled: smsEnabled,
-          createdAt: smsEnabled ? now : null,
-          updatedAt: smsEnabled ? now : null,
+          enabled: input.promoChannels?.sms?.enabled ?? false,
         },
         email: {
-          enabled: emailEnabled,
-          createdAt: emailEnabled ? now : null,
-          updatedAt: emailEnabled ? now : null,
+          enabled: input.promoChannels?.email?.enabled ?? false,
         },
       },
     };
-    console.log("Received registration data:", data);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    let apexResponse;
-
-    try {
-      apexResponse = await fetch(process.env.APEX_REGISTER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Registration payload:", data);
     }
+    // -----------------------------
+    // 3️⃣ Call Apex Service
+    // -----------------------------
+    const apexResult = await registerInApex(data);
 
-    if (!apexResponse || !apexResponse.ok) {
-      return res.status(502).json({
-        success: false,
-        code: "APEX_HTTP_ERROR",
-        message: "Apex server returned HTTP error",
-      });
-    }
-    let apexResult;
-
-    try {
-      apexResult = await apexResponse.json();
-    } catch {
-      return res.status(502).json({
-        success: false,
-        code: "APEX_INVALID_RESPONSE",
-        message: "Invalid response format from Apex",
-      });
-    }
-
+    // -----------------------------
+    // 4️⃣ Handle Apex business result
+    // -----------------------------
     if (apexResult.status === "CARD_NOT_FOUND") {
       return res.status(400).json({
         success: false,
@@ -116,7 +91,39 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const user = new User(data);
+    // -----------------------------
+    // 5️⃣ Save to MongoDB
+    // -----------------------------
+    const user = new User({
+      ...data,
+      createdAt: apexResult.createdAt
+        ? new Date(apexResult.createdAt)
+        : undefined,
+      updatedAt: apexResult.updatedAt
+        ? new Date(apexResult.updatedAt)
+        : undefined,
+
+      promoChannels: {
+        sms: {
+          enabled: data.promoChannels.sms.enabled,
+          createdAt: apexResult.promoChannels?.sms?.createdAt
+            ? new Date(apexResult.promoChannels.sms.createdAt)
+            : null,
+          updatedAt: apexResult.promoChannels?.sms?.updatedAt
+            ? new Date(apexResult.promoChannels.sms.updatedAt)
+            : null,
+        },
+        email: {
+          enabled: data.promoChannels.email.enabled,
+          createdAt: apexResult.promoChannels?.email?.createdAt
+            ? new Date(apexResult.promoChannels.email.createdAt)
+            : null,
+          updatedAt: apexResult.promoChannels?.email?.updatedAt
+            ? new Date(apexResult.promoChannels.email.updatedAt)
+            : null,
+        },
+      },
+    });
     await user.save();
 
     return res.status(200).json({
@@ -124,13 +131,56 @@ export const registerUser = async (req, res) => {
       message: "User registered successfully",
     });
   } catch (err) {
-    console.error(err);
+    console.error("Registration error:", err);
 
-    if (err.name === "AbortError") {
+    // -----------------------------
+    // 6️⃣ Map Service Errors
+    // -----------------------------
+    if (err.code === "CONFIG_ERROR") {
+      return res.status(500).json({
+        success: false,
+        code: "CONFIG_ERROR",
+        message: "Apex endpoint not configured",
+      });
+    }
+
+    if (err.code === "APEX_TIMEOUT") {
       return res.status(504).json({
         success: false,
         code: "APEX_TIMEOUT",
         message: "Apex server timeout",
+      });
+    }
+
+    if (err.code === "APEX_HTTP_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_HTTP_ERROR",
+        message: "Apex server returned HTTP error",
+      });
+    }
+
+    if (err.code === "APEX_INVALID_RESPONSE") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_INVALID_RESPONSE",
+        message: "Invalid response from Apex",
+      });
+    }
+
+    if (err.code === "APEX_NETWORK_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_NETWORK_ERROR",
+        message: "Apex server unreachable",
+      });
+    }
+
+    if (err.code === "APEX_UNKNOWN_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_UNKNOWN_ERROR",
+        message: "Unexpected Apex integration error",
       });
     }
 
@@ -139,79 +189,6 @@ export const registerUser = async (req, res) => {
       code: "INTERNAL_ERROR",
       message: "Registration failed",
     });
-  }
-};
-
-export const updateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const now = new Date();
-
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Update simple fields
-    const editableFields = [
-      "branch",
-      "gender",
-      "firstName",
-      "lastName",
-      "dateOfBirth",
-      "address",
-      "country",
-      "city",
-      "email",
-      "cardNumber",
-      "phoneNumber",
-      "phoneCode",
-    ];
-
-    editableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        user[field] = req.body[field];
-      }
-    });
-
-    // -----------------------
-    //   UPDATE PROMO CHANNELS
-    // -----------------------
-
-    if (req.body.promoChannels) {
-      // SMS
-      if (req.body.promoChannels.sms?.enabled !== undefined) {
-        const newVal = req.body.promoChannels.sms.enabled;
-        const sms = user.promoChannels.sms;
-
-        if (sms.enabled !== newVal) {
-          sms.updatedAt = now;
-          if (newVal && !sms.createdAt) sms.createdAt = now;
-        }
-
-        sms.enabled = newVal;
-      }
-
-      // EMAIL
-      if (req.body.promoChannels.email?.enabled !== undefined) {
-        const newVal = req.body.promoChannels.email.enabled;
-        const email = user.promoChannels.email;
-
-        if (email.enabled !== newVal) {
-          email.updatedAt = now;
-          if (newVal && !email.createdAt) email.createdAt = now;
-        }
-
-        email.enabled = newVal;
-      }
-    }
-
-    await user.save();
-
-    res.json({ success: true, user });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Update failed", message: err.message });
   }
 };
 
@@ -321,6 +298,7 @@ export const getUsersByDate = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch users" });
   }
 };
+
 export const getUsersByUpdateDate = async (req, res) => {
   try {
     const { date } = req.query;
@@ -353,5 +331,377 @@ export const getUsersByUpdateDate = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const parsed = updateUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        message: parsed.error.errors,
+      });
+    }
+
+    const input = parsed.data;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const editableFields = [
+      "branch",
+      "gender",
+      "firstName",
+      "lastName",
+      "dateOfBirth",
+      "address",
+      "country",
+      "city",
+      "email",
+      "phoneNumber",
+      "phoneCode",
+    ];
+
+    // -----------------------------
+    // 1️⃣ BUILD APEX PAYLOAD ONLY
+    // -----------------------------
+    const apexPayload = {
+      cardNumber: user.cardNumber, // identifier required
+    };
+
+    editableFields.forEach((field) => {
+      if (input[field] !== undefined) {
+        apexPayload[field] = input[field];
+      }
+    });
+
+    if (input.promoChannels) {
+      apexPayload.promoChannels = {};
+
+      if (input.promoChannels.sms?.enabled !== undefined) {
+        apexPayload.promoChannels.sms = {
+          enabled: input.promoChannels.sms.enabled,
+        };
+      }
+
+      if (input.promoChannels.email?.enabled !== undefined) {
+        apexPayload.promoChannels.email = {
+          enabled: input.promoChannels.email.enabled,
+        };
+      }
+    }
+
+    // -----------------------------
+    // 2️⃣ SEND TO APEX FIRST
+    // -----------------------------
+    const apexResult = await updateInApex(apexPayload);
+
+    if (!apexResult || apexResult.status !== "OK") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_UPDATE_FAILED",
+        message: `Apex update failed: ${apexResult?.status}`,
+      });
+    }
+
+    // -----------------------------
+    // 3️⃣ APPLY CHANGES TO MONGO
+    // -----------------------------
+    editableFields.forEach((field) => {
+      if (input[field] !== undefined) {
+        user[field] = input[field];
+      }
+    });
+
+    if (input.promoChannels) {
+      if (input.promoChannels.sms?.enabled !== undefined) {
+        user.promoChannels.sms.enabled = input.promoChannels.sms.enabled;
+      }
+
+      if (input.promoChannels.email?.enabled !== undefined) {
+        user.promoChannels.email.enabled = input.promoChannels.email.enabled;
+      }
+    }
+
+    // -----------------------------
+    // 4️⃣ SYNC TIMESTAMPS FROM APEX
+    // -----------------------------
+    if (apexResult.updatedAt) {
+      user.updatedAt = new Date(apexResult.updatedAt);
+    }
+
+    if (apexResult.promoChannels?.sms) {
+      if (apexResult.promoChannels.sms.createdAt) {
+        user.promoChannels.sms.createdAt = new Date(
+          apexResult.promoChannels.sms.createdAt,
+        );
+      }
+
+      if (apexResult.promoChannels.sms.updatedAt) {
+        user.promoChannels.sms.updatedAt = new Date(
+          apexResult.promoChannels.sms.updatedAt,
+        );
+      }
+    }
+
+    if (apexResult.promoChannels?.email) {
+      if (apexResult.promoChannels.email.createdAt) {
+        user.promoChannels.email.createdAt = new Date(
+          apexResult.promoChannels.email.createdAt,
+        );
+      }
+
+      if (apexResult.promoChannels.email.updatedAt) {
+        user.promoChannels.email.updatedAt = new Date(
+          apexResult.promoChannels.email.updatedAt,
+        );
+      }
+    }
+
+    await user.save();
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.log(err);
+
+    if (err.code === "CONFIG_ERROR") {
+      return res.status(500).json({
+        success: false,
+        code: "CONFIG_ERROR",
+        message: "Apex update endpoint not configured",
+      });
+    }
+
+    if (err.code === "APEX_TIMEOUT") {
+      return res.status(504).json({
+        success: false,
+        code: "APEX_TIMEOUT",
+        message: "Apex server timeout",
+      });
+    }
+
+    if (err.code === "APEX_HTTP_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_HTTP_ERROR",
+        message: "Apex server returned HTTP error",
+      });
+    }
+
+    if (err.code === "APEX_INVALID_RESPONSE") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_INVALID_RESPONSE",
+        message: "Invalid response from Apex",
+      });
+    }
+
+    if (err.code === "APEX_NETWORK_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_NETWORK_ERROR",
+        message: "Apex server unreachable",
+      });
+    }
+
+    if (err.code === "APEX_UNKNOWN_ERROR") {
+      return res.status(502).json({
+        success: false,
+        code: "APEX_UNKNOWN_ERROR",
+        message: "Unexpected Apex update error",
+      });
+    }
+
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        code: "CARD_ALREADY_EXISTS_LOCALLY",
+        message: "User already exists in local database",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      code: "INTERNAL_ERROR",
+      message: "Update failed",
+    });
+  }
+};
+
+export const registerUserMock = async (req, res) => {
+  try {
+    const parsed = registerUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        message: parsed.error.errors,
+      });
+    }
+
+    const input = parsed.data;
+
+    const normalizedCard = input.cardNumber
+      .replace(/-/g, "")
+      .replace(/\s/g, "")
+      .trim();
+
+    // ---- MOCK BUSINESS LOGIC ----
+    if (normalizedCard === "00000000000000") {
+      return res.status(400).json({
+        success: false,
+        code: "CARD_NOT_FOUND",
+        message: "Card does not exist",
+      });
+    }
+
+    if (normalizedCard === "11111111111111") {
+      return res.status(409).json({
+        success: false,
+        code: "CARD_ALREADY_USED",
+        message: "Card already used",
+      });
+    }
+
+    // ---- SIMULATE APEX RESPONSE ----
+    const now = new Date();
+
+    const mockApexResponse = {
+      status: "OK",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      promoChannels: {
+        sms: {
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        },
+        email: {
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        },
+      },
+    };
+
+    // ---- SAVE SAME WAY AS REAL FLOW ----
+    const user = new User({
+      ...input,
+      cardNumber: normalizedCard,
+      createdAt: new Date(mockApexResponse.createdAt),
+      updatedAt: new Date(mockApexResponse.updatedAt),
+      promoChannels: {
+        sms: {
+          enabled: input.promoChannels?.sms?.enabled ?? false,
+          createdAt: new Date(mockApexResponse.promoChannels.sms.createdAt),
+          updatedAt: new Date(mockApexResponse.promoChannels.sms.updatedAt),
+        },
+        email: {
+          enabled: input.promoChannels?.email?.enabled ?? false,
+          createdAt: new Date(mockApexResponse.promoChannels.email.createdAt),
+          updatedAt: new Date(mockApexResponse.promoChannels.email.updatedAt),
+        },
+      },
+    });
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "User registered (MOCK)",
+      user,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      code: "INTERNAL_ERROR",
+      message: "Mock registration failed",
+    });
+  }
+};
+
+export const updateUserMock = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const parsed = updateUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        message: parsed.error.errors,
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const input = parsed.data;
+
+    // ---- APPLY CHANGES ----
+    const allowedFields = [
+      "branch",
+      "gender",
+      "firstName",
+      "lastName",
+      "dateOfBirth",
+      "address",
+      "country",
+      "city",
+      "email",
+      "phoneNumber",
+      "phoneCode",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (input[field] !== undefined) {
+        user[field] = input[field];
+      }
+    });
+
+    const now = new Date();
+
+    // ---- SIMULATE APEX TIMESTAMP SYNC ----
+    if (input.promoChannels?.sms?.enabled !== undefined) {
+      user.promoChannels.sms.enabled = input.promoChannels.sms.enabled;
+      user.promoChannels.sms.updatedAt = now;
+      if (!user.promoChannels.sms.createdAt) {
+        user.promoChannels.sms.createdAt = now;
+      }
+    }
+
+    if (input.promoChannels?.email?.enabled !== undefined) {
+      user.promoChannels.email.enabled = input.promoChannels.email.enabled;
+      user.promoChannels.email.updatedAt = now;
+      if (!user.promoChannels.email.createdAt) {
+        user.promoChannels.email.createdAt = now;
+      }
+    }
+
+    user.updatedAt = now;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "User updated (MOCK)",
+      user,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      code: "INTERNAL_ERROR",
+      message: "Mock update failed",
+    });
   }
 };

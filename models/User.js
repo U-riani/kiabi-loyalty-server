@@ -1,3 +1,4 @@
+// backend/models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -20,7 +21,7 @@ const userSchema = new mongoose.Schema(
     email: String,
     phoneCode: { type: String, required: true },
     phoneNumber: { type: String, required: true },
-    cardNumber: { type: String, required: true },
+    cardNumber: { type: String, required: true},
     termsAccepted: { type: Boolean, required: true },
     promoChannels: {
       sms: {
@@ -35,7 +36,7 @@ const userSchema = new mongoose.Schema(
       },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("User", userSchema);

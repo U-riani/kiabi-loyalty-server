@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 👇 ADD THIS
 const serverUrl =
   process.env.NODE_ENV === "production"
     ? "https://kiabi-loyalty-server.onrender.com"
@@ -15,28 +14,73 @@ const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Loyalty Users API",
+      title: "GTEX ↔ Apex Loyalty Integration API",
       version: "1.0.0",
-      description: "API for managing loyalty users and syncing with Apex ERP.",
+      description: `
+This documentation describes ONLY the integration contract
+between GTEX backend and Apex ERP.
+
+It defines:
+
+• What GTEX sends to Apex  
+• What Apex must return  
+• Expected response formats  
+
+All internal backend logic, MongoDB storage,
+admin panel behavior, and frontend handling
+are intentionally excluded.
+`,
     },
     servers: [{ url: serverUrl }],
     components: {
       schemas: {
-        ApexUserPayload: {
+
+        /* =========================
+           APEX REGISTER PAYLOAD
+        ========================== */
+        ApexIntegrationPayload: {
           type: "object",
+          required: [
+            "branch",
+            "gender",
+            "firstName",
+            "lastName",
+            "dateOfBirth",
+            "address",
+            "country",
+            "city",
+            "email",
+            "cardNumber",
+            "phoneCode",
+            "phoneNumber",
+            "termsAccepted",
+            "promoChannels",
+          ],
           properties: {
             branch: { type: "string", example: "tbilisi" },
-            gender: { type: "string", example: "female" },
+            gender: {
+              type: "string",
+              enum: ["female", "male", "other"],
+              example: "female",
+            },
             firstName: { type: "string", example: "Nino" },
             lastName: { type: "string", example: "Beridze" },
-            dateOfBirth: { type: "string", example: "1995-06-12" },
+            dateOfBirth: {
+              type: "string",
+              format: "date",
+              example: "1995-06-12",
+            },
             address: { type: "string", example: "Rustaveli Ave 25" },
             city: { type: "string", example: "Tbilisi" },
             country: { type: "string", example: "Georgia" },
-            email: { type: "string", example: "nino@gmail.com" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "nino@gmail.com",
+            },
             cardNumber: {
               type: "string",
-              description: "Normalized card number (without '-' and spaces)",
+              description: "Normalized loyalty card number. Unique business identifier in Apex. Must exist in Apex and must not be already assigned to another customer.",
               example: "12345678900001",
             },
             phoneCode: { type: "string", example: "+995" },
@@ -44,47 +88,110 @@ const swaggerOptions = {
             termsAccepted: { type: "boolean", example: true },
             promoChannels: {
               type: "object",
+              required: ["sms", "email"],
               properties: {
                 sms: {
                   type: "object",
                   properties: {
                     enabled: { type: "boolean", example: true },
-                    createdAt: {
-                      type: "string",
-                      example: "2025-01-01T10:00:00Z",
-                    },
-                    updatedAt: {
-                      type: "string",
-                      example: "2025-01-01T10:00:00Z",
-                    },
                   },
                 },
                 email: {
                   type: "object",
                   properties: {
                     enabled: { type: "boolean", example: true },
-                    createdAt: {
-                      type: "string",
-                      example: "2025-01-01T10:00:00Z",
-                    },
-                    updatedAt: {
-                      type: "string",
-                      example: "2025-01-01T10:00:00Z",
-                    },
                   },
                 },
               },
             },
           },
         },
+
+        /* =========================
+           APEX UPDATE PAYLOAD
+        ========================== */
+        UpdateUserPayload: {
+          type: "object",
+          description:
+            "Partial update payload sent to Apex ERP. Only modified fields are included.",
+          properties: {
+            branch: { type: "string" },
+            gender: { type: "string", enum: ["female", "male", "other"] },
+            firstName: { type: "string" },
+            lastName: { type: "string" },
+            dateOfBirth: { type: "string", format: "date" },
+            address: { type: "string" },
+            city: { type: "string" },
+            country: { type: "string" },
+            email: { type: "string", format: "email" },
+            phoneCode: { type: "string" },
+            phoneNumber: { type: "string" },
+            promoChannels: {
+              type: "object",
+              properties: {
+                sms: {
+                  type: "object",
+                  properties: { enabled: { type: "boolean" } },
+                },
+                email: {
+                  type: "object",
+                  properties: { enabled: { type: "boolean" } },
+                },
+              },
+            },
+          },
+        },
+
+        /* =========================
+           APEX RESPONSE
+        ========================== */
         ApexResponse: {
           type: "object",
+          required: ["status"],
           properties: {
             status: {
               type: "string",
               enum: ["OK", "CARD_NOT_FOUND", "CARD_ALREADY_USED"],
               example: "OK",
             },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+              example: "2025-01-01T10:00:00Z",
+            },
+            updatedAt: {
+              type: "string",
+              format: "date-time",
+              example: "2025-01-01T10:05:00Z",
+            },
+            promoChannels: {
+              type: "object",
+              properties: {
+                sms: {
+                  type: "object",
+                  properties: {
+                    createdAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" },
+                  },
+                },
+                email: {
+                  type: "object",
+                  properties: {
+                    createdAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" },
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        ErrorResponse: {
+          type: "object",
+          properties: {
+            success: { type: "boolean" },
+            code: { type: "string" },
+            message: { type: "string" },
           },
         },
       },
