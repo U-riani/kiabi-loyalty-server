@@ -26,19 +26,16 @@ It defines:
 • What Apex must return  
 • Expected response formats  
 
-All internal backend logic, MongoDB storage,
-admin panel behavior, and frontend handling
-are intentionally excluded.
+For user identification during update Gtex backend always sends cardNumber as payload property.
 `,
     },
     servers: [{ url: serverUrl }],
     components: {
       schemas: {
-
         /* =========================
            APEX REGISTER PAYLOAD
         ========================== */
-        ApexIntegrationPayload: {
+        UserRegistrationPayload: {
           type: "object",
           required: [
             "branch",
@@ -80,7 +77,8 @@ are intentionally excluded.
             },
             cardNumber: {
               type: "string",
-              description: "Normalized loyalty card number. Unique business identifier in Apex. Must exist in Apex and must not be already assigned to another customer.",
+              description:
+                "Normalized loyalty card number. Unique business identifier in Apex. Must exist in Apex and must not be already assigned to another customer.",
               example: "12345678900001",
             },
             phoneCode: { type: "string", example: "+995" },
@@ -113,8 +111,15 @@ are intentionally excluded.
         UpdateUserPayload: {
           type: "object",
           description:
-            "Partial update payload sent to Apex ERP. Only modified fields are included.",
+            "Update payload sent to Apex ERP. cardNumber is always included as business identifier. Other fields are included only if modified.",
+          required: ["cardNumber"],
           properties: {
+            cardNumber: {
+              type: "string",
+              description:
+                "Normalized loyalty card number used by Apex as unique identifier.",
+              example: "12345678900001",
+            },
             branch: { type: "string" },
             gender: { type: "string", enum: ["female", "male", "other"] },
             firstName: { type: "string" },

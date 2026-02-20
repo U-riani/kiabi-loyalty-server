@@ -45,7 +45,7 @@ const router = express.Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ApexIntegrationPayload'
+ *             $ref: '#/components/schemas/UserRegistrationPayload'
  *
  *     responses:
  *       200:
@@ -61,12 +61,16 @@ const router = express.Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *
+ *       409:
+ *         description: Card already used
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       502:
  *         description: Apex integration failure
  */
 router.post("/register", registerUser);
-
 
 /* =======================================================
    🟢 MOCK REGISTER
@@ -91,7 +95,7 @@ router.post("/register", registerUser);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ApexIntegrationPayload'
+ *             $ref: '#/components/schemas/UserRegistrationPayload'
  *
  *     responses:
  *       200:
@@ -100,9 +104,15 @@ router.post("/register", registerUser);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApexResponse'
+ *
+ *       409:
+ *         description: Card already used
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/register-mock", registerUserMock);
-
 
 /* =======================================================
    🔵 REAL UPDATE (APEX)
@@ -125,7 +135,9 @@ router.post("/register-mock", registerUserMock);
  *         schema:
  *           type: string
  *           example: 69981e9c6515f1974f8e40fe
- *         description: Internal identifier (not sent to Apex) 
+ *         description:
+ *          This identifier is used only by GTEX backend.
+ *          Apex identifies users by cardNumber.
  *
  *     requestBody:
  *       required: true
@@ -140,13 +152,23 @@ router.post("/register-mock", registerUserMock);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApexResponse'
- *
+ *               type: object
+ *               properties:
+ *                success:
+ *                  type: boolean
+ *                  example: true
+ *                user:
+ *                  type: object
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       502:
  *         description: Apex integration failure
  */
 router.patch("/:id", updateUser);
-
 
 /* =======================================================
    🟢 MOCK UPDATE
@@ -168,7 +190,9 @@ router.patch("/:id", updateUser);
  *         schema:
  *           type: string
  *           example: 69981e9c6515f1974f8e40fe
- *         description: Internal identifier (not sent to Apex)
+ *         description:
+ *          This identifier is used only by GTEX backend.
+ *          Apex identifies users by cardNumber.
  *
  *     requestBody:
  *       required: true
@@ -186,7 +210,6 @@ router.patch("/:id", updateUser);
  *               $ref: '#/components/schemas/ApexResponse'
  */
 router.patch("/:id/mock", updateUserMock);
-
 
 /* =======================================================
    🔒 INTERNAL ROUTES (NOT DOCUMENTED)
