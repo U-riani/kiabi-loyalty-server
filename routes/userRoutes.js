@@ -56,19 +56,25 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ApexResponse'
  *
  *       400:
- *         description: Validation or business error
+ *         description: Validation error or CARD_NOT_FOUND
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
  *       409:
- *         description: Card already used
+ *         description: CARD_ALREADY_USED
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
  *       502:
  *         description: Apex integration failure
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/register", registerUser);
 
@@ -105,8 +111,15 @@ router.post("/register", registerUser);
  *             schema:
  *               $ref: '#/components/schemas/ApexResponse'
  *
+ *       400:
+ *         description: CARD_NOT_FOUND or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
  *       409:
- *         description: Card already used
+ *         description: CARD_ALREADY_USED
  *         content:
  *           application/json:
  *             schema:
@@ -135,9 +148,9 @@ router.post("/register-mock", registerUserMock);
  *         schema:
  *           type: string
  *           example: 69981e9c6515f1974f8e40fe
- *         description:
- *          This identifier is used only by GTEX backend.
- *          Apex identifies users by cardNumber.
+ *         description: |
+ *           This identifier is used only by GTEX backend.
+ *           Apex identifies users by cardNumber.
  *
  *     requestBody:
  *       required: true
@@ -152,21 +165,28 @@ router.post("/register-mock", registerUserMock);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                success:
- *                  type: boolean
- *                  example: true
- *                user:
- *                  type: object
+ *               $ref: '#/components/schemas/ApexResponse'
+ *
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
  *       404:
  *         description: User not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
  *       502:
  *         description: Apex integration failure
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch("/:id", updateUser);
 
@@ -190,9 +210,9 @@ router.patch("/:id", updateUser);
  *         schema:
  *           type: string
  *           example: 69981e9c6515f1974f8e40fe
- *         description:
- *          This identifier is used only by GTEX backend.
- *          Apex identifies users by cardNumber.
+ *         description: |
+ *           This identifier is used only by GTEX backend.
+ *           Apex identifies users by cardNumber.
  *
  *     requestBody:
  *       required: true
@@ -208,6 +228,20 @@ router.patch("/:id", updateUser);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApexResponse'
+ *
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch("/:id/mock", updateUserMock);
 

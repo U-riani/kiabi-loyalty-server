@@ -27,6 +27,15 @@ It defines:
 • Expected response formats  
 
 For user identification during update Gtex backend always sends cardNumber as payload property.
+
+
+Business statuses (OK, CARD_NOT_FOUND, CARD_ALREADY_USED)
+must always be returned with HTTP 200.
+
+HTTP status codes other than 200 are reserved for:
+- transport errors
+- server failures
+- unexpected conditions
 `,
     },
     servers: [{ url: serverUrl }],
@@ -193,10 +202,20 @@ For user identification during update Gtex backend always sends cardNumber as pa
 
         ErrorResponse: {
           type: "object",
+          required: ["success", "code", "message"],
           properties: {
-            success: { type: "boolean" },
-            code: { type: "string" },
-            message: { type: "string" },
+            success: {
+              type: "boolean",
+              example: false,
+            },
+            code: {
+              type: "string",
+              example: "INTERNAL_ERROR",
+            },
+            message: {
+              type: "string",
+              example: "Something went wrong",
+            },
           },
         },
       },

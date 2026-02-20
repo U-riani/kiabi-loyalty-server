@@ -126,10 +126,7 @@ export const registerUser = async (req, res) => {
     });
     await user.save();
 
-    return res.status(200).json({
-      success: true,
-      message: "User registered successfully",
-    });
+    return res.status(200).json(apexResult);
   } catch (err) {
     console.error("Registration error:", err);
 
@@ -466,7 +463,7 @@ export const updateUser = async (req, res) => {
 
     await user.save();
 
-    res.json({ success: true, user });
+    return res.status(200).json(apexResult);
   } catch (err) {
     console.log(err);
 
@@ -611,11 +608,7 @@ export const registerUserMock = async (req, res) => {
 
     await user.save();
 
-    return res.json({
-      success: true,
-      message: "User registered (MOCK)",
-      user,
-    });
+    return res.status(200).json(mockApexResponse);
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -692,11 +685,26 @@ export const updateUserMock = async (req, res) => {
 
     await user.save();
 
-    return res.json({
-      success: true,
-      message: "User updated (MOCK)",
-      user,
-    });
+    const mockApexResponse = {
+      status: "OK",
+      updatedAt: now.toISOString(),
+      promoChannels: {
+        sms: {
+          createdAt:
+            user.promoChannels.sms.createdAt?.toISOString?.() ||
+            now.toISOString(),
+          updatedAt: now.toISOString(),
+        },
+        email: {
+          createdAt:
+            user.promoChannels.email.createdAt?.toISOString?.() ||
+            now.toISOString(),
+          updatedAt: now.toISOString(),
+        },
+      },
+    };
+
+    return res.status(200).json(mockApexResponse);
   } catch (err) {
     return res.status(500).json({
       success: false,
