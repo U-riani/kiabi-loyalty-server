@@ -124,6 +124,7 @@ router.post("/register-mock", registerUserMock);
  *         required: true
  *         schema:
  *           type: string
+ *           example: 69981e9c6515f1974f8e40fe
  *         description: Internal identifier (not sent to Apex) 
  *
  *     requestBody:
@@ -166,6 +167,7 @@ router.patch("/:id", updateUser);
  *         required: true
  *         schema:
  *           type: string
+ *           example: 69981e9c6515f1974f8e40fe
  *         description: Internal identifier (not sent to Apex)
  *
  *     requestBody:
